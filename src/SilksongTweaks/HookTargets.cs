@@ -78,6 +78,17 @@ namespace SilksongTweaks
         public static readonly HookTarget MaxHealthField =
             new HookTarget("PlayerData", "maxHealth", HookKind.Field, "MaxHealth");
 
+        // Transpiled to restore the CurrentMaxHealth == maxHealth invariant. AddToMaxHealth is
+        // deliberately absent: it is the mask-shard upgrade path and writes both members.
+        public static readonly HookTarget PlayerDataAddHealth =
+            new HookTarget("PlayerData", "AddHealth", HookKind.Method, "MaxHealth");
+
+        public static readonly HookTarget PlayerDataTakeHealth =
+            new HookTarget("PlayerData", "TakeHealth", HookKind.Method, "MaxHealth");
+
+        public static readonly HookTarget PlayerDataMaxHealth =
+            new HookTarget("PlayerData", "MaxHealth", HookKind.Method, "MaxHealth");
+
         // --- Damage taken -------------------------------------------------------------------
         public static readonly HookTarget TakeDamage =
             new HookTarget("HeroController", "TakeDamage", HookKind.Method, "DamageTaken");
@@ -94,6 +105,9 @@ namespace SilksongTweaks
             CurrentMaxHealth,
             GetInt,
             MaxHealthField,
+            PlayerDataAddHealth,
+            PlayerDataTakeHealth,
+            PlayerDataMaxHealth,
             TakeDamage,
         };
     }

@@ -1,7 +1,26 @@
 # How to use Silksong Tweaks
 
-Press **`F8`** in game to open the panel. Everything changes instantly — there is no Apply
-button and no restart.
+Press **`F8`** — or **Back / View / Share** on a controller — to open the panel. Everything
+changes instantly. There is no Apply button and no restart.
+
+## Controls
+
+| Action | Gamepad | Keyboard / mouse |
+|---|---|---|
+| Open / close | **Back / View / Share** | `F8` |
+| Move between rows | D-pad or left stick | ↑ ↓ |
+| Change a value | left / right | ← → or drag the slider |
+| Toggle on / off | **A** | Enter, Space, or click |
+| Close | **B** | Esc |
+
+The row you are on is highlighted.
+
+**The game pauses while the panel is open**, so pushing the stick to move down a row does not
+also walk Hornet into a hazard. If that clashes with anything, set `FreezeGameWhileOpen = false`
+in the config.
+
+The open button defaults to Back/View because it is the one button unbound during normal play —
+opening the panel never costs you a jump or an attack.
 
 ---
 

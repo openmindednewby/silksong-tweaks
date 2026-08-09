@@ -5,35 +5,123 @@ using UnityEngine;
 namespace SilksongTweaks.Ui
 {
     /// <summary>
-    /// The F8 panel. Renders purely from what modules expose — name, settings, status — so
+    /// The tweak panel. Renders purely from what modules expose — name, settings, status — so
     /// adding a tweak never touches this file.
+    ///
+    /// Navigable by mouse, keyboard or gamepad. IMGUI supplies no focus model, so this keeps a
+    /// flat index over every editable row and highlights the current one.
     /// </summary>
     public sealed class TweakWindow
     {
-        private const int WindowId = 0x51_4B_53; // arbitrary, just needs to be stable
+        private const int WindowId = 0x51_4B_53;
         private static readonly Vector2 Size = new Vector2(430f, 560f);
+        private const int FloatSliderSteps = 20;
 
         private readonly ModuleRegistry _registry;
         private readonly Theme _theme = new Theme();
+        private readonly PanelInput _input = new PanelInput();
         private readonly Dictionary<string, bool> _listening = new Dictionary<string, bool>();
-        private IReadOnlyList<string> _conflicts;
+        private readonly List<NavRow> _nav = new List<NavRow>();
 
+        private IReadOnlyList<string> _conflicts;
         private Rect _rect = new Rect(60f, 60f, Size.x, Size.y);
         private Vector2 _scroll;
         private bool _showCredits;
+        private int _focus;
+        private int _drawIndex;
 
         public TweakWindow(ModuleRegistry registry) => _registry = registry;
 
         public bool Visible { get; set; }
 
+        private struct NavRow
+        {
+            public ITweakModule Module;
+            public ISettingRow Row;
+        }
+
+        /// <summary>Called from Update so gamepad polling is frame-accurate, not per-GUI-event.</summary>
+        public void HandleInput(float unscaledDelta)
+        {
+            if (!Visible) return;
+
+            RebuildNav();
+            if (_nav.Count == 0) return;
+
+            _input.Sample(unscaledDelta);
+
+            if (_input.Cancel)
+            {
+                Visible = false;
+                return;
+            }
+
+            if (_input.Vertical != 0)
+            {
+                _focus = (_focus + _input.Vertical + _nav.Count) % _nav.Count;
+            }
+
+            if (_input.Horizontal != 0) Adjust(_nav[_focus], _input.Horizontal);
+            if (_input.Activate) Activate(_nav[_focus]);
+        }
+
+        private void RebuildNav()
+        {
+            _nav.Clear();
+            foreach (var module in _registry.Modules)
+            {
+                if (module.Status.State == TweakState.Unavailable) continue;
+                foreach (var row in module.Settings)
+                    _nav.Add(new NavRow { Module = module, Row = row });
+            }
+
+            if (_focus >= _nav.Count) _focus = 0;
+        }
+
+        private void Adjust(NavRow nav, int direction)
+        {
+            if (nav.Row is BoolRow b)
+            {
+                b.Entry.Value = direction > 0;
+                return;
+            }
+
+            if (nav.Row is IntRow i)
+            {
+                i.Entry.Value = Mathf.Clamp(i.Entry.Value + direction, i.Min, i.Max);
+                return;
+            }
+
+            if (nav.Row is FloatRow f)
+            {
+                var step = (f.Max - f.Min) / FloatSliderSteps;
+                f.Entry.Value = Mathf.Clamp(f.Entry.Value + direction * step, f.Min, f.Max);
+            }
+        }
+
+        private void Activate(NavRow nav)
+        {
+            if (nav.Row is BoolRow b)
+            {
+                b.Entry.Value = !b.Entry.Value;
+                return;
+            }
+
+            if (nav.Row is KeyRow k)
+            {
+                var key = nav.Module.Id + ":" + k.Label;
+                _listening[key] = !Listening(key);
+            }
+        }
+
+        private bool Listening(string key) => _listening.TryGetValue(key, out var v) && v;
+
         public void Draw()
         {
             _theme.EnsureBuilt();
-
             DrawCountdownToast();
 
             if (!Visible) return;
-
             if (_conflicts == null) _conflicts = Conflicts.Detect();
 
             _rect = GUILayout.Window(WindowId, _rect, DrawBody,
@@ -42,7 +130,7 @@ namespace SilksongTweaks.Ui
         }
 
         /// <summary>
-        /// Shown even when the panel is closed: during a return countdown you need to know it is
+        /// Shown even with the panel closed: during a return countdown you need to know it is
         /// happening and how to stop it, without opening a menu mid-respawn.
         /// </summary>
         private void DrawCountdownToast()
@@ -69,12 +157,18 @@ namespace SilksongTweaks.Ui
             if (_conflicts != null && _conflicts.Count > 0) DrawConflictWarning();
 
             _scroll = GUILayout.BeginScrollView(_scroll);
+            _drawIndex = 0;
 
             foreach (var module in _registry.Modules) DrawModule(module);
 
-            GUILayout.Space(8f);
-            DrawCredits();
+            GUILayout.Space(6f);
+            GUILayout.Label(
+                "Move: D-pad / left stick / arrows    Change: left-right    Toggle: A / Enter" +
+                "\nClose: B / Esc / the open button",
+                _theme.Footer);
 
+            GUILayout.Space(6f);
+            DrawCredits();
             GUILayout.EndScrollView();
 
             GUI.DragWindow(new Rect(0f, 0f, Size.x, 22f));
@@ -86,7 +180,7 @@ namespace SilksongTweaks.Ui
             _theme.SectionDesc.normal.textColor = Theme.Bad;
             GUILayout.Label(
                 "CONFLICT: these mods do the same job and will fight this one.\n  · " +
-                string.Join("\n  · ", ArrayOf(_conflicts)) +
+                string.Join("\n  · ", ToArray(_conflicts)) +
                 "\nRemove them from BepInEx/plugins.", _theme.SectionDesc);
             _theme.SectionDesc.normal.textColor = previous;
             GUILayout.Space(6f);
@@ -104,69 +198,68 @@ namespace SilksongTweaks.Ui
                 return;
             }
 
-            foreach (var row in module.Settings) DrawRow(module, row);
+            foreach (var row in module.Settings)
+            {
+                var selected = _drawIndex == _focus;
+                _drawIndex++;
+                DrawRow(module, row, selected);
+            }
+
             GUILayout.Space(6f);
         }
 
-        private void DrawRow(ITweakModule module, ISettingRow row)
+        private void DrawRow(ITweakModule module, ISettingRow row, bool selected)
         {
-            var boolRow = row as BoolRow;
-            if (boolRow != null)
+            if (selected) GUILayout.BeginHorizontal(_theme.SelectedRow);
+
+            if (row is BoolRow boolRow)
             {
                 var v = boolRow.Entry.Value;
                 Widgets.Toggle(_theme, boolRow.Label, boolRow.Tooltip, ref v);
                 if (v != boolRow.Entry.Value) boolRow.Entry.Value = v;
-                return;
             }
-
-            var intRow = row as IntRow;
-            if (intRow != null)
+            else if (row is IntRow intRow)
             {
                 var v = intRow.Entry.Value;
                 Widgets.IntSlider(_theme, intRow.Label, intRow.Tooltip, ref v, intRow.Min, intRow.Max);
                 if (v != intRow.Entry.Value) intRow.Entry.Value = v;
-                return;
             }
-
-            var floatRow = row as FloatRow;
-            if (floatRow != null)
+            else if (row is FloatRow floatRow)
             {
                 var v = floatRow.Entry.Value;
                 Widgets.FloatSlider(_theme, floatRow.Label, floatRow.Tooltip, ref v,
                     new FloatRange(floatRow.Min, floatRow.Max, floatRow.Format));
                 if (!Mathf.Approximately(v, floatRow.Entry.Value)) floatRow.Entry.Value = v;
-                return;
+            }
+            else if (row is KeyRow keyRow)
+            {
+                var key = module.Id + ":" + keyRow.Label;
+                var listening = Listening(key);
+                var code = keyRow.Entry.Value;
+                Widgets.KeyBinder(_theme, keyRow.Label, keyRow.Tooltip, ref code, ref listening);
+                _listening[key] = listening;
+                if (code != keyRow.Entry.Value) keyRow.Entry.Value = code;
             }
 
-            var keyRow = row as KeyRow;
-            if (keyRow == null) return;
-
-            var listenKey = module.Id + ":" + keyRow.Label;
-            if (!_listening.ContainsKey(listenKey)) _listening[listenKey] = false;
-
-            var listening = _listening[listenKey];
-            var code = keyRow.Entry.Value;
-            Widgets.KeyBinder(_theme, keyRow.Label, keyRow.Tooltip, ref code, ref listening);
-            _listening[listenKey] = listening;
-            if (code != keyRow.Entry.Value) keyRow.Entry.Value = code;
+            if (selected) GUILayout.EndHorizontal();
         }
 
         private void DrawCredits()
         {
-            _showCredits = GUILayout.Toggle(_showCredits, _showCredits ? "Credits ▾" : "Credits ▸");
+            _showCredits = GUILayout.Toggle(_showCredits, _showCredits ? "Credits" : "Credits ...");
             if (!_showCredits) return;
 
             GUILayout.Label(
                 "Silksong Tweaks is an independent implementation, built against the game's own " +
                 "API. It replaces three mods whose ideas it owes a debt to — with thanks to:\n" +
-                "  · Xiaohai (XiaohaiMod) — ReBack, for returning to the death location\n" +
-                "  · BlueRaja — rosaries never permanently lost, for cocoon merging\n" +
-                "  · Ericky1694 — CustomDifficulty, for health and damage tuning\n" +
+                "  - Xiaohai (XiaohaiMod) - ReBack, for returning to the death location\n" +
+                "  - BlueRaja - rosaries never permanently lost, for cocoon merging\n" +
+                "  - Ericky1694 - CustomDifficulty, for health and damage tuning\n" +
                 "\nMIT licensed. Built on BepInEx and HarmonyX.",
                 _theme.Footer);
         }
 
-        private static string[] ArrayOf(IReadOnlyList<string> items)
+        private static string[] ToArray(IReadOnlyList<string> items)
         {
             var result = new string[items.Count];
             for (var i = 0; i < items.Count; i++) result[i] = items[i];

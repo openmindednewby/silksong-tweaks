@@ -30,6 +30,9 @@ namespace SilksongTweaks.Ui
         public GUIStyle Footer { get; private set; }
         public GUIStyle Toast { get; private set; }
 
+        /// <summary>Background for the row the gamepad/keyboard cursor is on.</summary>
+        public GUIStyle SelectedRow { get; private set; }
+
         public void EnsureBuilt()
         {
             if (_built) return;
@@ -86,6 +89,13 @@ namespace SilksongTweaks.Ui
             };
             Toast.normal.background = SolidTexture(new Color(0.06f, 0.06f, 0.08f, 0.88f));
             Toast.normal.textColor = Silk;
+
+            SelectedRow = new GUIStyle
+            {
+                padding = new RectOffset(6, 6, 1, 1),
+                margin = new RectOffset(-6, -6, 0, 0),
+            };
+            SelectedRow.normal.background = SolidTexture(new Color(Accent.r, Accent.g, Accent.b, 0.22f));
         }
 
         private static Texture2D SolidTexture(Color color)

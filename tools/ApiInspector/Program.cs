@@ -34,8 +34,38 @@ return mode switch
 {
     "dump" => Dump(managedDir, target, args[2], args.Length > 3 ? args[3] : null),
     "xref" => Xref(target, args[2]),
+    "il" => Il(target, args[2], args.Length > 3 ? args[3] : ".*"),
     _ => Fail($"unknown mode '{mode}'"),
 };
+
+// Disassembles a method body. When a patched value has no effect, the answer is almost always
+// visible here: the method reads a DIFFERENT member than the one we hooked.
+static int Il(string target, string typeName, string methodPattern)
+{
+    var methodRegex = new Regex(methodPattern, RegexOptions.IgnoreCase);
+    using var module = ModuleDefinition.ReadModule(target);
+
+    var type = AllTypes(module).FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+    if (type is null) return Fail($"type '{typeName}' not found");
+
+    foreach (var method in type.Methods.Where(m => methodRegex.IsMatch(m.Name) && m.HasBody))
+    {
+        Console.WriteLine($"=== {type.Name}::{method.Name} ===");
+        foreach (var ins in method.Body.Instructions)
+            Console.WriteLine($"  {ins.Offset:X4}  {ins.OpCode.Name,-14} {Operand(ins.Operand)}");
+        Console.WriteLine();
+    }
+
+    return 0;
+
+    static string Operand(object? o) => o switch
+    {
+        FieldReference f => $"{f.DeclaringType.Name}::{f.Name}",
+        MethodReference m => $"{m.DeclaringType.Name}::{m.Name}",
+        null => "",
+        _ => o.ToString() ?? "",
+    };
+}
 
 static int Fail(string msg)
 {
