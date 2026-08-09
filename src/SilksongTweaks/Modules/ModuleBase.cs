@@ -22,7 +22,27 @@ namespace SilksongTweaks.Modules
         public abstract string DisplayName { get; }
         public abstract string Description { get; }
 
-        public TweakStatus Status { get; protected set; } = TweakStatus.Unavailable("not applied yet");
+        private TweakStatus _hookStatus = TweakStatus.Unavailable("not applied yet");
+
+        /// <summary>
+        /// Hook state combined with the live enable toggle.
+        ///
+        /// The hook result is decided once at startup, but the toggle changes at any moment, so
+        /// reporting only the former makes a switched-off tweak read as ACTIVE — which is exactly
+        /// the "is this actually doing anything?" confusion this mod exists to remove.
+        /// </summary>
+        public TweakStatus Status
+        {
+            get
+            {
+                if (_hookStatus.State == TweakState.Unavailable) return _hookStatus;
+                return EnabledEntry != null && !EnabledEntry.Value
+                    ? TweakStatus.Disabled
+                    : TweakStatus.Active;
+            }
+
+            protected set => _hookStatus = value;
+        }
 
         public long LastFiredUtcTicks { get; private set; }
 

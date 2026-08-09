@@ -44,7 +44,24 @@ cp "$src/bin/Release/netstandard2.1/SilksongTweaks.dll" "$staging/BepInEx/plugin
 
 out="$dist/SilksongTweaks-$version.zip"
 rm -f "$out"
-( cd "$staging" && zip -qr "$out" . )
+
+# `zip` is not present on a stock Windows/Git-Bash box, and python always is here.
+if command -v zip >/dev/null 2>&1; then
+  ( cd "$staging" && zip -qr "$out" . )
+else
+  python - "$staging" "$out" <<'PY'
+import os, sys, zipfile
+staging, out = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+    for root, _, files in os.walk(staging):
+        for f in files:
+            full = os.path.join(root, f)
+            # Thunderstore requires manifest.json/icon.png/README.md at the ARCHIVE ROOT,
+            # so paths are stored relative to the staging dir with forward slashes.
+            z.write(full, os.path.relpath(full, staging).replace(os.sep, "/"))
+PY
+fi
+
 rm -rf "$staging"
 
 echo "packaged: $out"
