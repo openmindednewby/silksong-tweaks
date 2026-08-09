@@ -76,6 +76,9 @@ dotnet build src/SilksongTweaks -c Release
 dotnet test  tests/SilksongTweaks.Tests
 ```
 
+👉 **[Local co-op plan](docs/LOCAL-COOP-PLAN.md)** — how two people could play on one PC, and
+why split-screen is not the route.
+
 👉 **[Full development guide](docs/DEVELOPMENT.md)** — the ApiInspector tool, the release
 process, and every trap worth knowing (why it can't build in CI, why hooking compiler-generated
 iterators breaks silently, why Silksong's health is event-driven).
