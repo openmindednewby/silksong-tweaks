@@ -55,6 +55,43 @@ namespace SilksongTweaks.Modules
 
             AddRow(new IntRow("Masks", "How many masks Hornet has at full health.",
                 _masks, HealthRules.MinMasks, HealthRules.MaxMasks));
+
+            // The mask HUD is a PlayMaker FSM that rebuilds on an EVENT, not by polling. Without
+            // this, changing the slider (or switching the tweak off) changes what the game would
+            // read while the bar on screen keeps its old shape — which reads as "the setting did
+            // nothing" even though the underlying value changed correctly.
+            _masks.SettingChanged += (sender, args) => RefreshMaskDisplay();
+            EnabledEntry.SettingChanged += (sender, args) => RefreshMaskDisplay();
+        }
+
+        /// <summary>
+        /// Asks the game to re-announce max health, which is what makes the HUD rebuild.
+        ///
+        /// HeroController.MaxHealth() sends "HeroCtrl-MaxHealth" to the HUD FSM and also refills
+        /// health — the refill is a deliberate side effect, since a rebuilt bar showing stale
+        /// emptiness is worse than a full one, and this is a tweak panel, not a survival mode.
+        /// </summary>
+        private static void RefreshMaskDisplay()
+        {
+            try
+            {
+                var hero = HeroController.instance;
+                if (hero == null) return;
+
+                var refresh = AccessTools.Method(typeof(HeroController), "MaxHealth");
+                if (refresh == null)
+                {
+                    Plugin.Log.LogWarning("[MaxHealth] HeroController.MaxHealth() not found; HUD will refresh on its own next bench.");
+                    return;
+                }
+
+                refresh.Invoke(hero, null);
+            }
+            catch (System.Exception ex)
+            {
+                // Never let a cosmetic refresh break a setting change.
+                Plugin.Log.LogWarning($"[MaxHealth] HUD refresh failed: {ex.Message}");
+            }
         }
 
         protected override TweakStatus Apply(Harmony harmony)

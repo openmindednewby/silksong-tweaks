@@ -1,0 +1,9 @@
+{
+  "name": "SilksongTweaks",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/openmindednewby/silksong-tweaks",
+  "description": "Return to where you died, never permanently lose rosaries, set max masks and damage taken. One panel, gamepad friendly, shows whether each tweak is actually working.",
+  "dependencies": [
+    "silksong_modding-BepInExPack_Silksong-1.0.3"
+  ]
+}
