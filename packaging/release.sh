@@ -85,10 +85,27 @@ notes="$(awk '/^## /{n++} n==1{print} n>1{exit}' CHANGELOG.md 2>/dev/null || ech
 gh release create "v$version" "$zip" --title "v$version" --notes "$notes"
 
 echo "==> Thunderstore"
+
+# Token resolution, most explicit first. TCLI_ENV_FILE lets a machine keep its secrets
+# in one place without this PUBLIC repo ever naming a personal path or holding a value.
+if [ -z "${TCLI_AUTH_TOKEN:-}" ] && [ -n "${THUNDER_STORE_SERVICE_ACCOUNT_ACCESS_TOKEN:-}" ]; then
+  TCLI_AUTH_TOKEN="$THUNDER_STORE_SERVICE_ACCOUNT_ACCESS_TOKEN"
+fi
+
+if [ -z "${TCLI_AUTH_TOKEN:-}" ] && [ -n "${TCLI_ENV_FILE:-}" ] && [ -f "$TCLI_ENV_FILE" ]; then
+  # Read only the one key, and never echo it. \042 and \047 are " and ' as octal, which
+  # keeps this free of nested-quote breakage.
+  TCLI_AUTH_TOKEN="$(sed -n 's/^THUNDER_STORE_SERVICE_ACCOUNT_ACCESS_TOKEN=//p' "$TCLI_ENV_FILE" \
+                     | head -1 | tr -d '\r' | tr -d '\042\047')"
+  [ -n "$TCLI_AUTH_TOKEN" ] && echo "  token loaded from \$TCLI_ENV_FILE"
+fi
+export TCLI_AUTH_TOKEN
+
 if command -v tcli >/dev/null 2>&1; then
   if [ -z "${TCLI_AUTH_TOKEN:-}" ]; then
-    echo "  TCLI_AUTH_TOKEN not set — skipping automatic publish."
-    echo "  Create a service account token in your Thunderstore team settings."
+    echo "  No token found. Set TCLI_AUTH_TOKEN, or THUNDER_STORE_SERVICE_ACCOUNT_ACCESS_TOKEN,"
+    echo "  or point TCLI_ENV_FILE at an env file containing the latter."
+    echo "  Upload manually: https://thunderstore.io/c/hollow-knight-silksong/create/"
   else
     tcli publish --file "$zip"
     echo "  published"
