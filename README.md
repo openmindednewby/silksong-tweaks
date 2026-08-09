@@ -68,25 +68,26 @@ A game update that breaks one tweak leaves the other three running, and says so.
 
 ## Building
 
-Requires the .NET SDK. The game supplies the reference assemblies.
+Requires the .NET SDK and an installed copy of Silksong, which supplies the reference
+assemblies.
 
 ```bash
 dotnet build src/SilksongTweaks -c Release
 dotnet test  tests/SilksongTweaks.Tests
 ```
 
-If Silksong is not at the default path:
+👉 **[Full development guide](docs/DEVELOPMENT.md)** — the ApiInspector tool, the release
+process, and every trap worth knowing (why it can't build in CI, why hooking compiler-generated
+iterators breaks silently, why Silksong's health is event-driven).
+
+## Releasing
 
 ```bash
-dotnet build src/SilksongTweaks -c Release -p:GameDir="D:\path\to\Hollow Knight Silksong"
+./packaging/release.sh 1.0.1
 ```
 
-`tools/ApiInspector` reads the game assembly without running it, for finding hook targets:
-
-```bash
-dotnet run --project tools/ApiInspector -- dump "<ManagedDir>" '^PlayerData$' 'health'
-dotnet run --project tools/ApiInspector -- xref "<ManagedDir>" '^maxHealth$'
-```
+Bumps the version everywhere, tests, packages, tags, pushes, creates the GitHub Release and
+publishes to Thunderstore. See [DEVELOPMENT.md](docs/DEVELOPMENT.md#releasing) for token setup.
 
 ---
 
