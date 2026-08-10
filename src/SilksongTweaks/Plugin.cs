@@ -55,6 +55,7 @@ namespace SilksongTweaks
                 _registry.Add(new KeepRosariesModule());
                 _registry.Add(new MaxHealthModule());
                 _registry.Add(new DamageTakenModule());
+                _registry.Add(new ControllerLockModule());
 
                 _registry.ApplyAll(Config, new Harmony(PluginGuid));
                 _window = new TweakWindow(_registry);
