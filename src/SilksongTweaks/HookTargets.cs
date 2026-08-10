@@ -93,6 +93,18 @@ namespace SilksongTweaks
         public static readonly HookTarget TakeDamage =
             new HookTarget("HeroController", "TakeDamage", HookKind.Method, "DamageTaken");
 
+        // --- Rosary multiplier ---------------------------------------------------------------
+        // GeoControl is the physical rosary pickup. Its Collected() is the ONLY currency path
+        // that means "the player walked over a dropped rosary", which is what we want to
+        // multiply. CurrencyManager.AddGeo is shared: CocoonBroken reaches it via AddCurrency ->
+        // ProcessAddCurrency, so multiplying AddGeo unconditionally would also inflate the death
+        // cocoon and double-dip with KeepRosaries.
+        public static readonly HookTarget GeoControlCollected =
+            new HookTarget("GeoControl", "Collected", HookKind.Method, "RosaryMultiplier");
+
+        public static readonly HookTarget CurrencyManagerAddGeo =
+            new HookTarget("CurrencyManager", "AddGeo", HookKind.Method, "RosaryMultiplier");
+
         /// <summary>Every target, for the verification test.</summary>
         public static IReadOnlyList<HookTarget> All { get; } = new List<HookTarget>
         {
@@ -109,6 +121,8 @@ namespace SilksongTweaks
             PlayerDataTakeHealth,
             PlayerDataMaxHealth,
             TakeDamage,
+            GeoControlCollected,
+            CurrencyManagerAddGeo,
         };
     }
 }

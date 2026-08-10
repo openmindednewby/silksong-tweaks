@@ -64,6 +64,45 @@ public class HealthRulesTests
         Assert.Equal(expected, HealthRules.Resolve(vanillaMax: 1, configured, enabled: true));
 }
 
+public class MoneyRulesTests
+{
+    [Theory]
+    [InlineData(10, 1.0f, 10)]
+    [InlineData(10, 2.0f, 20)]
+    [InlineData(7, 3.0f, 21)]
+    public void Multiplies_the_pickup(int amount, float multiplier, int expected) =>
+        Assert.Equal(expected, MoneyRules.Scale(amount, multiplier));
+
+    [Fact]
+    public void Rounds_rather_than_truncating()
+    {
+        // 1 rosary at 1.5x truncates to 1, which reads as "the setting does nothing".
+        Assert.Equal(2, MoneyRules.Scale(1, 1.5f));
+        Assert.Equal(5, MoneyRules.Scale(3, 1.5f));
+    }
+
+    [Fact]
+    public void A_multiplier_can_never_reduce_a_pickup()
+    {
+        Assert.Equal(10, MoneyRules.Scale(10, 0.5f));
+        Assert.Equal(10, MoneyRules.Scale(10, -4f));
+    }
+
+    [Fact]
+    public void Clamps_at_the_maximum() =>
+        Assert.Equal(100, MoneyRules.Scale(10, 999f));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Non_positive_amounts_pass_through(int amount) =>
+        Assert.Equal(amount, MoneyRules.Scale(amount, 5f));
+
+    [Fact]
+    public void Huge_pickups_cannot_overflow() =>
+        Assert.Equal(int.MaxValue, MoneyRules.Scale(int.MaxValue, 10f));
+}
+
 public class CocoonRulesTests
 {
     [Fact]

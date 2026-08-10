@@ -53,6 +53,36 @@ namespace SilksongTweaks.Rules
         }
     }
 
+    public static class MoneyRules
+    {
+        public const float MinMultiplier = 1f;
+        public const float MaxMultiplier = 10f;
+
+        /// <summary>
+        /// Scale a rosary pickup.
+        ///
+        /// Rounds rather than truncates, so a 1.5x multiplier on a single rosary yields 2 instead
+        /// of 1 — truncation makes small drops feel like the setting is ignored. A pickup worth
+        /// something never scales to nothing.
+        /// </summary>
+        public static int Scale(int amount, float multiplier)
+        {
+            if (amount <= 0) return amount;
+            if (multiplier <= MinMultiplier) return amount;
+
+            var capped = multiplier > MaxMultiplier ? MaxMultiplier : multiplier;
+
+            // AwayFromZero, NOT the default. .NET rounds halves to EVEN, so 3 x 1.5 would pay 4
+            // while 5 x 1.5 pays 8 — the same multiplier rounding in different directions, which
+            // reads as the setting being unreliable rather than as a rounding rule.
+            var scaled = System.Math.Round(
+                amount * (double)capped, System.MidpointRounding.AwayFromZero);
+
+            if (scaled < amount) return amount;
+            return scaled > int.MaxValue ? int.MaxValue : (int)scaled;
+        }
+    }
+
     public static class CocoonRules
     {
         /// <summary>
