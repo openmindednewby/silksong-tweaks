@@ -105,6 +105,21 @@ namespace SilksongTweaks
         public static readonly HookTarget CurrencyManagerAddGeo =
             new HookTarget("CurrencyManager", "AddGeo", HookKind.Method, "RosaryMultiplier");
 
+        // --- Controller lock ----------------------------------------------------------------
+        // Silksong reads gamepads through InControl, which is compiled into Assembly-CSharp
+        // rather than shipped as its own assembly, so these resolve out of the same DLL as the
+        // targets above. Update is declared only on the base PlayerActionSet — no subclass
+        // overrides it — so one hook there covers every action set the game creates.
+        public static readonly HookTarget PlayerActionSetUpdate =
+            new HookTarget("InControl.PlayerActionSet", "Update", HookKind.Method, "ControllerLock");
+
+        public static readonly HookTarget PlayerActionSetIncludeDevices =
+            new HookTarget("InControl.PlayerActionSet", "IncludeDevices",
+                HookKind.PropertyGetter, "ControllerLock");
+
+        public static readonly HookTarget InputManagerDevices =
+            new HookTarget("InControl.InputManager", "Devices", HookKind.Field, "ControllerLock");
+
         /// <summary>Every target, for the verification test.</summary>
         public static IReadOnlyList<HookTarget> All { get; } = new List<HookTarget>
         {
@@ -123,6 +138,9 @@ namespace SilksongTweaks
             TakeDamage,
             GeoControlCollected,
             CurrencyManagerAddGeo,
+            PlayerActionSetUpdate,
+            PlayerActionSetIncludeDevices,
+            InputManagerDevices,
         };
     }
 }
