@@ -34,6 +34,9 @@ namespace SilksongTweaks.Modules
         /// <summary>Do not filter at all: the vanilla behaviour, and the default.</summary>
         private const int AllJoysticks = 0;
 
+        /// <summary>Per-process override, so two instances can share one install folder.</summary>
+        private const string JoystickEnvVar = "SILKSONG_JOYSTICK";
+
         /// <summary>Matches InControl's practical device count; two is all local co-op needs.</summary>
         private const int MaxJoystickIndex = 4;
 
@@ -68,6 +71,36 @@ namespace SilksongTweaks.Modules
 
             AddRow(new IntRow("Joystick", "0 = all controllers. 1 = first pad, 2 = second pad.",
                 _joystickIndex, AllJoysticks, MaxJoystickIndex));
+        }
+
+        /// <summary>
+        /// The joystick this instance is locked to, with the environment variable winning.
+        ///
+        /// This is what lets local co-op run TWO INSTANCES FROM ONE INSTALL FOLDER. BepInEx
+        /// config is per-install, so two processes sharing a folder read the same JoystickIndex
+        /// and would lock onto the same pad. An environment variable is per-process, so the
+        /// launcher sets SILKSONG_JOYSTICK=1 for one window and 2 for the other, and neither
+        /// touches the config file. The alternative was copying the whole 7.7 GB game folder.
+        ///
+        /// Config remains the default so single-player users are unaffected and the panel still
+        /// works normally when nothing sets the variable.
+        /// </summary>
+        private int EffectiveIndex
+        {
+            get
+            {
+                var raw = System.Environment.GetEnvironmentVariable(JoystickEnvVar);
+
+                if (!string.IsNullOrEmpty(raw)
+                    && int.TryParse(raw, out var parsed)
+                    && parsed >= AllJoysticks
+                    && parsed <= MaxJoystickIndex)
+                {
+                    return parsed;
+                }
+
+                return _joystickIndex != null ? _joystickIndex.Value : AllJoysticks;
+            }
         }
 
         protected override TweakStatus Apply(Harmony harmony)
@@ -116,7 +149,7 @@ namespace SilksongTweaks.Modules
             var self = _instance;
             if (self == null || __instance == null) return;
 
-            var index = self.IsOn ? self._joystickIndex.Value : AllJoysticks;
+            var index = self.IsOn ? self.EffectiveIndex : AllJoysticks;
             if (index == AllJoysticks)
             {
                 Release(__instance);
