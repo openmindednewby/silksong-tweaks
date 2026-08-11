@@ -60,7 +60,7 @@ namespace SilksongTweaks
                 _registry.Add(new ControllerLockModule());
 
                 _registry.ApplyAll(Config, new Harmony(PluginGuid));
-                _window = new TweakWindow(_registry);
+                _window = new TweakWindow(_registry) { HotkeyLabel = _toggleKey.Value.ToString() };
 
                 Log.LogInfo($"{PluginName} {PluginVersion} ready. Press {_toggleKey.Value} for the panel.");
             }

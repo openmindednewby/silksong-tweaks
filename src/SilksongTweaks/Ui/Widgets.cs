@@ -39,6 +39,17 @@ namespace SilksongTweaks.Ui
             GUILayout.EndHorizontal();
         }
 
+        /// <summary>Returns true on the frame the button is pressed.</summary>
+        public static bool Button(Theme theme, string label, string tooltip, string caption)
+        {
+            GUILayout.BeginHorizontal(GUILayout.Height(RowHeight));
+            GUILayout.Label(new GUIContent(label, tooltip), theme.RowLabel, GUILayout.Width(LabelWidth));
+            GUILayout.FlexibleSpace();
+            var pressed = GUILayout.Button(caption, GUILayout.Width(110f));
+            GUILayout.EndHorizontal();
+            return pressed;
+        }
+
         public static void KeyBinder(
             Theme theme, string label, string tooltip, ref KeyCode value, ref bool listening)
         {

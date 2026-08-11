@@ -103,6 +103,38 @@ public class MoneyRulesTests
         Assert.Equal(int.MaxValue, MoneyRules.Scale(int.MaxValue, 10f));
 }
 
+public class DeathPurseRulesTests
+{
+    [Theory]
+    [InlineData(100, 0, 0)]
+    [InlineData(100, 50, 50)]
+    [InlineData(100, 100, 100)]
+    [InlineData(37, 50, 18)]
+    public void Keeps_the_configured_share(int carried, int percent, int expected) =>
+        Assert.Equal(expected, DeathPurseRules.KeepOnDeath(carried, percent));
+
+    [Fact]
+    public void Zero_percent_is_vanilla_and_drops_everything() =>
+        Assert.Equal(0, DeathPurseRules.KeepOnDeath(500, 0));
+
+    [Fact]
+    public void Can_never_hand_back_more_than_you_carried()
+    {
+        Assert.Equal(500, DeathPurseRules.KeepOnDeath(500, 100));
+        Assert.Equal(500, DeathPurseRules.KeepOnDeath(500, 250));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-20)]
+    public void Nothing_carried_means_nothing_kept(int carried) =>
+        Assert.Equal(0, DeathPurseRules.KeepOnDeath(carried, 100));
+
+    [Fact]
+    public void Negative_percent_is_treated_as_vanilla() =>
+        Assert.Equal(0, DeathPurseRules.KeepOnDeath(100, -50));
+}
+
 public class CocoonRulesTests
 {
     [Fact]

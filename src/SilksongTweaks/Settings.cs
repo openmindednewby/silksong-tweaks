@@ -65,6 +65,30 @@ namespace SilksongTweaks
         public string Format { get; }
     }
 
+    /// <summary>
+    /// A row that performs an action instead of holding a value — "give me 1000 rosaries now".
+    /// Kept distinct from the value rows so the UI can render and activate it differently, and so
+    /// nothing about it is ever written to the config file.
+    /// </summary>
+    public sealed class ButtonRow : ISettingRow
+    {
+        public ButtonRow(string label, string tooltip, string caption, Action action)
+        {
+            Label = label;
+            Tooltip = tooltip;
+            Caption = caption;
+            Action = action;
+        }
+
+        public string Label { get; }
+        public string Tooltip { get; }
+
+        /// <summary>Text on the button itself.</summary>
+        public string Caption { get; }
+
+        public Action Action { get; }
+    }
+
     public sealed class KeyRow : ISettingRow
     {
         public KeyRow(string label, string tooltip, ConfigEntry<KeyCode> entry)

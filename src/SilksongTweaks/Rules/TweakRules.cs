@@ -83,6 +83,24 @@ namespace SilksongTweaks.Rules
         }
     }
 
+    public static class DeathPurseRules
+    {
+        /// <summary>
+        /// How many of the rosaries you were carrying stay in your hand when you die.
+        ///
+        /// Vanilla is 0% — everything drops. 100% means death costs nothing. Truncates rather
+        /// than rounds up, so a percentage can never hand back more than you were carrying.
+        /// </summary>
+        public static int KeepOnDeath(int carried, int percent)
+        {
+            if (carried <= 0) return 0;
+            if (percent <= 0) return 0;
+            if (percent >= 100) return carried;
+
+            return (int)(carried * (percent / 100.0));
+        }
+    }
+
     public static class CocoonRules
     {
         /// <summary>

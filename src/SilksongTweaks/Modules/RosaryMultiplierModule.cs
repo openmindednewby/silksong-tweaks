@@ -40,9 +40,15 @@ namespace SilksongTweaks.Modules
 
         private ConfigEntry<float> _multiplier;
 
+        private const int MinGive = 1;
+        private const int MaxGive = 50000;
+
+        private ConfigEntry<int> _giveAmount;
+
+        // Id stays RosaryMultiplier so existing config sections keep working; only the label moved.
         public override string Id => "RosaryMultiplier";
-        public override string DisplayName => "Rosary multiplier";
-        public override string Description => "Multiply rosaries picked up from defeated enemies.";
+        public override string DisplayName => "Rosaries";
+        public override string Description => "Multiply rosaries from enemies, or grant some on demand.";
 
         protected override void BindSettings(ConfigFile config)
         {
@@ -53,6 +59,42 @@ namespace SilksongTweaks.Modules
 
             AddRow(new FloatRow("Multiplier", "1 = vanilla. Applies to rosaries you pick up.",
                 _multiplier, MoneyRules.MinMultiplier, MoneyRules.MaxMultiplier, "0.00x"));
+
+            _giveAmount = config.Bind(Id, "GiveAmount", 1000,
+                new ConfigDescription(
+                    "How many rosaries the Give button hands over.",
+                    new AcceptableValueRange<int>(MinGive, MaxGive)));
+
+            AddRow(new IntRow("Give amount", "How many the button below hands over.",
+                _giveAmount, MinGive, MaxGive));
+
+            AddRow(new ButtonRow("Grant rosaries", "Adds them to your purse immediately.",
+                "Give now", Give));
+        }
+
+        /// <summary>
+        /// Hands over rosaries immediately.
+        ///
+        /// Routed through CurrencyManager.AddGeo — the game's own entry point — rather than writing
+        /// PlayerData.geo, so the on-screen counter animates and updates like any other gain. It
+        /// deliberately does NOT go through the pickup path, so the multiplier never applies to it:
+        /// asking for 1000 must hand over exactly 1000, not 1000 times whatever the slider says.
+        /// </summary>
+        private void Give()
+        {
+            var amount = _giveAmount != null ? _giveAmount.Value : 0;
+            if (amount <= 0) return;
+
+            try
+            {
+                CurrencyManager.AddGeo(amount);
+                MarkFired();
+                Plugin.Log.LogInfo($"[Rosaries] granted {amount}");
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Log.LogWarning($"[Rosaries] grant failed: {ex.Message}");
+            }
         }
 
         protected override TweakStatus Apply(Harmony harmony)

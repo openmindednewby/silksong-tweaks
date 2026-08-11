@@ -34,6 +34,15 @@ namespace SilksongTweaks.Ui
 
         public bool Visible { get; set; }
 
+        /// <summary>
+        /// How to reopen this panel, shown in the title bar and footer.
+        ///
+        /// Worth stating explicitly: a user who closes a settings panel mid-game has no way to
+        /// know it is reopenable unless told, and may assume changes are locked in for the
+        /// session. Plugin owns the actual keybind, so it supplies the text.
+        /// </summary>
+        public string HotkeyLabel { get; set; } = "F8";
+
         private struct NavRow
         {
             public ITweakModule Module;
@@ -107,6 +116,12 @@ namespace SilksongTweaks.Ui
                 return;
             }
 
+            if (nav.Row is ButtonRow button)
+            {
+                button.Action?.Invoke();
+                return;
+            }
+
             if (nav.Row is KeyRow k)
             {
                 var key = nav.Module.Id + ":" + k.Label;
@@ -125,7 +140,8 @@ namespace SilksongTweaks.Ui
             if (_conflicts == null) _conflicts = Conflicts.Detect();
 
             _rect = GUILayout.Window(WindowId, _rect, DrawBody,
-                $"  SILKSONG TWEAKS   ·   {_registry.ActiveCount}/{_registry.Modules.Count} active",
+                $"  SILKSONG TWEAKS   ·   {HotkeyLabel} closes / reopens   ·   " +
+                $"{_registry.ActiveCount}/{_registry.Modules.Count} active",
                 _theme.Window, GUILayout.Width(Size.x), GUILayout.Height(Size.y));
         }
 
@@ -163,6 +179,9 @@ namespace SilksongTweaks.Ui
 
             GUILayout.Space(6f);
             GUILayout.Label(
+                $"Press {HotkeyLabel} (or Back / View on a controller) any time to close or reopen " +
+                "this panel — mid-fight, mid-fall, whenever. Nothing is locked in for the session, " +
+                "and every change applies instantly.\n" +
                 "Move: D-pad / left stick / arrows    Change: left-right    Toggle: A / Enter" +
                 "\nClose: B / Esc / the open button",
                 _theme.Footer);
@@ -230,6 +249,13 @@ namespace SilksongTweaks.Ui
                 Widgets.FloatSlider(_theme, floatRow.Label, floatRow.Tooltip, ref v,
                     new FloatRange(floatRow.Min, floatRow.Max, floatRow.Format));
                 if (!Mathf.Approximately(v, floatRow.Entry.Value)) floatRow.Entry.Value = v;
+            }
+            else if (row is ButtonRow buttonRow)
+            {
+                if (Widgets.Button(_theme, buttonRow.Label, buttonRow.Tooltip, buttonRow.Caption))
+                {
+                    buttonRow.Action?.Invoke();
+                }
             }
             else if (row is KeyRow keyRow)
             {
