@@ -190,7 +190,7 @@ namespace SilksongTweaks.Ui
 
             GUILayout.Space(6f);
             GUILayout.Label(
-                $"Press {HotkeyLabel} (or Back / View on a controller) any time to close or reopen " +
+                $"Press {HotkeyLabel} (or click BOTH sticks, L3 + R3, on a controller) any time to close or reopen " +
                 "this panel — mid-fight, mid-fall, whenever. Nothing is locked in for the session, " +
                 "and every change applies instantly.\n" +
                 "Move: D-pad / left stick / arrows    Change: left-right    Toggle: A / Enter" +
@@ -309,7 +309,10 @@ namespace SilksongTweaks.Ui
 
             _scrollRequested = false;
 
-            const float Margin = 28f;
+            // Roughly two rows. Scrolling only once the focused row touches the edge means you are
+            // always reading the very last visible line with no idea what is coming; keeping a
+            // couple of rows of lead makes the list feel like it is moving with you.
+            const float Margin = 68f;
 
             if (_focusRect.yMax + Margin > _scroll.y + _viewHeight)
             {

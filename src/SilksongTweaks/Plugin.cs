@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using InControl;
 using SilksongTweaks.Modules;
 using SilksongTweaks.Ui;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace SilksongTweaks
         private bool _uiBroken;
         private bool _wasVisible;
         private bool _panelModeApplied;
+        private bool _stickComboHeld;
         private float _timeScaleBeforeOpen = 1f;
 
         private void Awake()
@@ -76,12 +78,64 @@ namespace SilksongTweaks
         /// <summary>Lets modules run coroutines without each becoming a MonoBehaviour.</summary>
         public Coroutine Run(IEnumerator routine) => StartCoroutine(routine);
 
+        /// <summary>
+        /// Both stick clicks (L3 + R3) together open and close the panel.
+        ///
+        /// WHY A COMBO, AND WHY READ IT THROUGH InControl:
+        /// The original gamepad binding used UnityEngine.Input with KeyCode.JoystickButton6, and
+        /// it simply never fired — Silksong reads gamepads through InControl, and legacy KeyCode
+        /// mapping for pad buttons is unreliable and differs between controllers. Reading the
+        /// device InControl already owns is the only mapping guaranteed to match the pad in your
+        /// hands.
+        ///
+        /// L3 + R3 because no single button is safe: every face, shoulder and d-pad button does
+        /// something in play, and Back/View is not present on every pad. Two stick clicks at once
+        /// is effectively never pressed by accident and exists on every controller.
+        ///
+        /// This reads the DEVICE directly rather than an action set, so it keeps working while the
+        /// panel is muting gamepad input to the game — otherwise the panel could be opened and
+        /// never closed.
+        /// </summary>
+        private bool GamepadComboWasPressed()
+        {
+            var held = false;
+
+            try
+            {
+                var devices = InputManager.Devices;
+                if (devices == null) return false;
+
+                for (var i = 0; i < devices.Count; i++)
+                {
+                    var device = devices[i];
+                    if (device == null || !device.IsAttached) continue;
+
+                    if (device.LeftStickButton.IsPressed && device.RightStickButton.IsPressed)
+                    {
+                        held = true;
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                // InControl not ready yet, or the API moved. The keyboard hotkey still works.
+                return false;
+            }
+
+            // Edge-triggered: holding the combo must toggle once, not once per frame.
+            var pressed = held && !_stickComboHeld;
+            _stickComboHeld = held;
+            return pressed;
+        }
+
         private void Update()
         {
             if (_window == null || _toggleKey == null) return;
 
             if (Input.GetKeyDown(_toggleKey.Value)
-                || (_gamepadToggleButton != null && Input.GetKeyDown(_gamepadToggleButton.Value)))
+                || (_gamepadToggleButton != null && Input.GetKeyDown(_gamepadToggleButton.Value))
+                || GamepadComboWasPressed())
             {
                 _window.Visible = !_window.Visible;
             }
