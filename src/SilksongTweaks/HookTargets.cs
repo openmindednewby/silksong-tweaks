@@ -110,8 +110,11 @@ namespace SilksongTweaks
         // through PlayerData.GetBool(name) — the PlayMaker string path. Postfixing GetBool is
         // therefore read-side only and never writes the save. HasAnyPin reads the FIELDS though,
         // so it needs its own postfix or the map's pin legend stays hidden.
-        public static readonly HookTarget GetBool =
-            new HookTarget("PlayerData", "GetBool", HookKind.Method, "MapPins");
+        // MapPin.IsActive is the gate. CanBeActive checks it FIRST and only then checks
+        // parentScene.IsMapped / IsVisited, so forcing it can never reveal a room you have not
+        // been to — the discovery test still runs afterwards.
+        public static readonly HookTarget MapPinIsActive =
+            new HookTarget("MapPin", "IsActive", HookKind.PropertyGetter, "MapPins");
 
         public static readonly HookTarget HasAnyPin =
             new HookTarget("PlayerData", "HasAnyPin", HookKind.PropertyGetter, "MapPins");
@@ -152,7 +155,7 @@ namespace SilksongTweaks
             TakeDamage,
             GeoControlCollected,
             CurrencyManagerAddGeo,
-            GetBool,
+            MapPinIsActive,
             HasAnyPin,
             PinBenchField,
             PlayerActionSetUpdate,
