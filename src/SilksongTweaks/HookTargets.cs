@@ -105,6 +105,20 @@ namespace SilksongTweaks
         public static readonly HookTarget CurrencyManagerAddGeo =
             new HookTarget("CurrencyManager", "AddGeo", HookKind.Method, "RosaryMultiplier");
 
+        // --- Map pins -------------------------------------------------------------------------
+        // The pin flags have NO direct IL readers except get_HasAnyPin, so the map UI reads them
+        // through PlayerData.GetBool(name) — the PlayMaker string path. Postfixing GetBool is
+        // therefore read-side only and never writes the save. HasAnyPin reads the FIELDS though,
+        // so it needs its own postfix or the map's pin legend stays hidden.
+        public static readonly HookTarget GetBool =
+            new HookTarget("PlayerData", "GetBool", HookKind.Method, "MapPins");
+
+        public static readonly HookTarget HasAnyPin =
+            new HookTarget("PlayerData", "HasAnyPin", HookKind.PropertyGetter, "MapPins");
+
+        public static readonly HookTarget PinBenchField =
+            new HookTarget("PlayerData", "hasPinBench", HookKind.Field, "MapPins");
+
         // --- Controller lock ----------------------------------------------------------------
         // Silksong reads gamepads through InControl, which is compiled into Assembly-CSharp
         // rather than shipped as its own assembly, so these resolve out of the same DLL as the
@@ -138,6 +152,9 @@ namespace SilksongTweaks
             TakeDamage,
             GeoControlCollected,
             CurrencyManagerAddGeo,
+            GetBool,
+            HasAnyPin,
+            PinBenchField,
             PlayerActionSetUpdate,
             PlayerActionSetIncludeDevices,
             InputManagerDevices,
