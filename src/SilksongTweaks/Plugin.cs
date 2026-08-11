@@ -27,6 +27,7 @@ namespace SilksongTweaks
         private ConfigEntry<bool> _freezeWhileOpen;
         private bool _uiBroken;
         private bool _wasVisible;
+        private bool _panelModeApplied;
         private float _timeScaleBeforeOpen = 1f;
 
         private void Awake()
@@ -89,6 +90,40 @@ namespace SilksongTweaks
             _window.HandleInput(Time.unscaledDeltaTime);
 
             ApplyFreeze();
+            ApplyPanelMode();
+        }
+
+        /// <summary>
+        /// While the panel is open: show the mouse, and stop gamepad input reaching the game.
+        ///
+        /// Both are re-asserted EVERY FRAME rather than once on open, because the game owns these
+        /// too and will quietly take them back — Silksong hides the cursor during play, so setting
+        /// it once leaves you clicking at an invisible pointer a moment later.
+        ///
+        /// Without the input block, pressing A to flip a toggle also makes Hornet attack, and the
+        /// d-pad drives both the panel and the game's own menus at once. Freezing time does not
+        /// prevent it: Update still runs and input is still delivered.
+        /// </summary>
+        private void ApplyPanelMode()
+        {
+            var open = _window.Visible;
+
+            if (open)
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+                ControllerLockModule.SuppressGameInput = true;
+                _panelModeApplied = true;
+                return;
+            }
+
+            if (!_panelModeApplied) return;
+            _panelModeApplied = false;
+
+            // Hand the cursor back to the game rather than forcing it visible forever.
+            ControllerLockModule.SuppressGameInput = false;
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.None;
         }
 
         /// <summary>
@@ -119,8 +154,10 @@ namespace SilksongTweaks
 
         private void OnDestroy()
         {
-            // Never leave the game frozen if the plugin is torn down while the panel is open.
+            // Never leave the game frozen, mute or cursor-locked if the plugin is torn down while
+            // the panel is open — any of those would look like the game itself had broken.
             if (_wasVisible && Time.timeScale == 0f) Time.timeScale = 1f;
+            ControllerLockModule.SuppressGameInput = false;
         }
 
         private void OnGUI()

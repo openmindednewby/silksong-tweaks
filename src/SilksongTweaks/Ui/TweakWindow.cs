@@ -30,6 +30,12 @@ namespace SilksongTweaks.Ui
         private int _focus;
         private int _drawIndex;
 
+        // Auto-scroll state. Rects can only be read during Repaint, and navigation happens in
+        // Update, so the request is raised in one phase and satisfied in the other.
+        private Rect _focusRect;
+        private float _viewHeight;
+        private bool _scrollRequested;
+
         public TweakWindow(ModuleRegistry registry) => _registry = registry;
 
         public bool Visible { get; set; }
@@ -68,6 +74,11 @@ namespace SilksongTweaks.Ui
             if (_input.Vertical != 0)
             {
                 _focus = (_focus + _input.Vertical + _nav.Count) % _nav.Count;
+
+                // Ask the next Repaint to bring the new row into view. Without this the cursor
+                // walks off the bottom of the scroll area and you are editing a row you cannot
+                // see — and a gamepad has no other way to scroll.
+                _scrollRequested = true;
             }
 
             if (_input.Horizontal != 0) Adjust(_nav[_focus], _input.Horizontal);
@@ -190,6 +201,13 @@ namespace SilksongTweaks.Ui
             DrawCredits();
             GUILayout.EndScrollView();
 
+            if (Event.current != null && Event.current.type == EventType.Repaint)
+            {
+                _viewHeight = GUILayoutUtility.GetLastRect().height;
+            }
+
+            ApplyAutoScroll();
+
             GUI.DragWindow(new Rect(0f, 0f, Size.x, 22f));
         }
 
@@ -267,7 +285,42 @@ namespace SilksongTweaks.Ui
                 if (code != keyRow.Entry.Value) keyRow.Entry.Value = code;
             }
 
-            if (selected) GUILayout.EndHorizontal();
+            if (!selected) return;
+
+            GUILayout.EndHorizontal();
+
+            // GetLastRect is only meaningful during Repaint, and returns content-space
+            // coordinates inside a scroll view — which is exactly the space _scroll lives in.
+            if (Event.current != null && Event.current.type == EventType.Repaint)
+            {
+                _focusRect = GUILayoutUtility.GetLastRect();
+            }
+        }
+
+        /// <summary>
+        /// Scrolls just far enough to reveal the focused row, with a margin so it never sits flush
+        /// against the edge. Only runs after a navigation keypress, so it never fights the mouse
+        /// wheel or a drag.
+        /// </summary>
+        private void ApplyAutoScroll()
+        {
+            if (!_scrollRequested) return;
+            if (_viewHeight <= 0f || _focusRect.height <= 0f) return;
+
+            _scrollRequested = false;
+
+            const float Margin = 28f;
+
+            if (_focusRect.yMax + Margin > _scroll.y + _viewHeight)
+            {
+                _scroll.y = _focusRect.yMax + Margin - _viewHeight;
+                return;
+            }
+
+            if (_focusRect.yMin - Margin < _scroll.y)
+            {
+                _scroll.y = Mathf.Max(0f, _focusRect.yMin - Margin);
+            }
         }
 
         private void DrawCredits()

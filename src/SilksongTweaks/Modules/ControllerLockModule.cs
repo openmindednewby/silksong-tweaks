@@ -144,10 +144,33 @@ namespace SilksongTweaks.Modules
         /// panel can toggle this tweak mid-game. Both are cheap — the work below is two reference
         /// comparisons unless something actually changed.
         /// </summary>
+        /// <summary>
+        /// While true, NO gamepad input reaches the game at all.
+        ///
+        /// Set by the panel while it is open. Without this, pressing A to flip a toggle also makes
+        /// Hornet attack, and the d-pad both moves the cursor and picks items in the game's own
+        /// menus — you end up editing two things at once. Freezing time does not help, because
+        /// Update still runs and InControl still delivers input.
+        ///
+        /// The panel itself is unaffected: it reads legacy UnityEngine.Input, while this blocks
+        /// InControl. Two separate pipelines, which is exactly why one can be muted without
+        /// deafening the other. The keyboard also still reaches the game, since InControl's
+        /// keyboard bindings ignore the device — one reason Esc still closes things normally.
+        /// </summary>
+        public static bool SuppressGameInput { get; set; }
+
         private static void UpdatePrefix(PlayerActionSet __instance)
         {
             var self = _instance;
             if (self == null || __instance == null) return;
+
+            // Checked before the enable toggle: suppression is the panel protecting itself, not a
+            // user-facing tweak, so it must work even with Controller lock switched off.
+            if (SuppressGameInput)
+            {
+                Mute(__instance);
+                return;
+            }
 
             var index = self.IsOn ? self.EffectiveIndex : AllJoysticks;
             if (index == AllJoysticks)
@@ -183,6 +206,23 @@ namespace SilksongTweaks.Modules
             if (zeroBased < 0 || zeroBased >= devices.Count) return null;
 
             return devices[zeroBased];
+        }
+
+        /// <summary>
+        /// Points the action set at InControl's Null device, which is never attached, so
+        /// FindActiveDevice resolves nothing and every gamepad action reads as unpressed.
+        /// Deliberately does not MarkFired: this is not the tweak doing its job.
+        /// </summary>
+        private static void Mute(PlayerActionSet set)
+        {
+            var include = set.IncludeDevices;
+            if (include == null) return;
+
+            if (include.Count == 1 && ReferenceEquals(include[0], InputDevice.Null)) return;
+
+            include.Clear();
+            include.Add(InputDevice.Null);
+            Restricted.Add(set);
         }
 
         private static void Restrict(PlayerActionSet set, InputDevice device)
