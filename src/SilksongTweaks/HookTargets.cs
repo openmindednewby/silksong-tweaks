@@ -116,6 +116,12 @@ namespace SilksongTweaks
         public static readonly HookTarget MapPinIsActive =
             new HookTarget("MapPin", "IsActive", HookKind.PropertyGetter, "MapPins");
 
+        // What actually sets IsActive on each pin, and therefore the only place a re-activation
+        // makes the map redraw. Forcing the getter alone changed the answer without ever
+        // prompting the question again.
+        public static readonly HookTarget EnableUnlockedAreas =
+            new HookTarget("GameMap", "EnableUnlockedAreas", HookKind.Method, "MapPins");
+
         public static readonly HookTarget HasAnyPin =
             new HookTarget("PlayerData", "HasAnyPin", HookKind.PropertyGetter, "MapPins");
 
@@ -156,6 +162,7 @@ namespace SilksongTweaks
             GeoControlCollected,
             CurrencyManagerAddGeo,
             MapPinIsActive,
+            EnableUnlockedAreas,
             HasAnyPin,
             PinBenchField,
             PlayerActionSetUpdate,

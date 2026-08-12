@@ -64,6 +64,19 @@ namespace SilksongTweaks.Modules
             harmony.Patch(isActive, postfix: new HarmonyMethod(
                 typeof(MapPinsModule), nameof(IsActivePostfix)));
 
+            // Forcing the GETTER alone was not enough, and the reason is worth keeping: MapPin
+            // only re-evaluates visibility inside ApplyState, which runs on Start, on CycleState,
+            // and when IsActive is SET — never merely because the getter would now answer
+            // differently. So the map was asking once, before our answer could matter, and never
+            // asking again. GameMap.EnableUnlockedAreas is what actually sets IsActive per pin, so
+            // we re-activate them there, which pushes each pin through ApplyState and a fresh
+            // CanBeActive — including its untouched IsMapped / IsVisited discovery checks.
+            var enableAreas = Resolve(HookTargets.EnableUnlockedAreas, out error);
+            if (enableAreas == null) return TweakStatus.Unavailable(error);
+
+            harmony.Patch(enableAreas, postfix: new HarmonyMethod(
+                typeof(MapPinsModule), nameof(EnableUnlockedAreasPostfix)));
+
             // HasAnyPin reads the pin FIELDS directly rather than going through anything we hook,
             // so without this the map can honour individual pins while still believing you own
             // none — which hides the pin legend.
@@ -82,6 +95,41 @@ namespace SilksongTweaks.Modules
 
             __result = true;
             self.MarkFired();
+        }
+
+        /// <summary>
+        /// Re-activates every pin under the map after the game has finished deciding which ones
+        /// you own. Setting IsActive is what makes a pin re-run ApplyState and redraw, so this is
+        /// a write to the pin COMPONENT — not to PlayerData, so the save is still untouched.
+        /// </summary>
+        private static void EnableUnlockedAreasPostfix(GameMap __instance)
+        {
+            var self = _instance;
+            if (self == null || __instance == null || !self.Enabled) return;
+
+            try
+            {
+                // Include inactive children: a pin you do not own may be disabled in the hierarchy.
+                var pins = __instance.GetComponentsInChildren<MapPin>(true);
+                if (pins == null || pins.Length == 0) return;
+
+                var activated = 0;
+                foreach (var pin in pins)
+                {
+                    if (pin == null || pin.IsActive) continue;
+                    pin.IsActive = true;
+                    activated++;
+                }
+
+                if (activated <= 0) return;
+
+                self.MarkFired();
+                Plugin.Log.LogInfo($"[MapPins] activated {activated} of {pins.Length} pin(s)");
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Log.LogWarning($"[MapPins] could not activate pins: {ex.Message}");
+            }
         }
 
         private static void HasAnyPinPostfix(ref bool __result)

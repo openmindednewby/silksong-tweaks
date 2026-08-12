@@ -14,7 +14,7 @@ namespace SilksongTweaks.Ui
     public sealed class TweakWindow
     {
         private const int WindowId = 0x51_4B_53;
-        private static readonly Vector2 Size = new Vector2(430f, 560f);
+        private static readonly Vector2 Size = new Vector2(486f, 560f);
         private const int FloatSliderSteps = 20;
 
         private readonly ModuleRegistry _registry;
@@ -151,7 +151,7 @@ namespace SilksongTweaks.Ui
             if (_conflicts == null) _conflicts = Conflicts.Detect();
 
             _rect = GUILayout.Window(WindowId, _rect, DrawBody,
-                $"  SILKSONG TWEAKS   ·   {HotkeyLabel} closes / reopens   ·   " +
+                $"  SILKSONG TWEAKS   ·   {HotkeyLabel} or L3+R3 closes / reopens   ·   " +
                 $"{_registry.ActiveCount}/{_registry.Modules.Count} active",
                 _theme.Window, GUILayout.Width(Size.x), GUILayout.Height(Size.y));
         }
