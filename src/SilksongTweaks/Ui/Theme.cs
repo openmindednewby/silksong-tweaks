@@ -28,6 +28,7 @@ namespace SilksongTweaks.Ui
         public GUIStyle Value { get; private set; }
         public GUIStyle Badge { get; private set; }
         public GUIStyle Footer { get; private set; }
+        public GUIStyle Credits { get; private set; }
         public GUIStyle Toast { get; private set; }
 
         /// <summary>Background for the row the gamepad/keyboard cursor is on.</summary>
@@ -77,8 +78,14 @@ namespace SilksongTweaks.Ui
                 fontStyle = FontStyle.Bold,
             };
 
-            Footer = new GUIStyle(GUI.skin.label) { fontSize = 10, wordWrap = true };
+            // 12, not 10: at 10 this rendered as unreadable fine print. wordWrap off so the
+            // aligned columns stay aligned instead of reflowing into a block.
+            Footer = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = false };
             Footer.normal.textColor = Muted;
+
+            // Prose, so it must wrap — unlike the aligned key list above.
+            Credits = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
+            Credits.normal.textColor = Muted;
 
             Toast = new GUIStyle(GUI.skin.box)
             {

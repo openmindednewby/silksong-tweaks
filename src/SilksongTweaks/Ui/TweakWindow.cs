@@ -14,7 +14,7 @@ namespace SilksongTweaks.Ui
     public sealed class TweakWindow
     {
         private const int WindowId = 0x51_4B_53;
-        private static readonly Vector2 Size = new Vector2(486f, 560f);
+        private static readonly Vector2 Size = new Vector2(600f, 600f);
         private const int FloatSliderSteps = 20;
 
         private readonly ModuleRegistry _registry;
@@ -189,12 +189,14 @@ namespace SilksongTweaks.Ui
             foreach (var module in _registry.Modules) DrawModule(module);
 
             GUILayout.Space(6f);
+            // Three short aligned lines rather than a wrapped paragraph. The paragraph reflowed
+            // into an unreadable block at this width and font size, and nobody reads help text
+            // that looks like fine print.
             GUILayout.Label(
-                $"Press {HotkeyLabel} (or click BOTH sticks, L3 + R3, on a controller) any time to close or reopen " +
-                "this panel — mid-fight, mid-fall, whenever. Nothing is locked in for the session, " +
-                "and every change applies instantly.\n" +
-                "Move: D-pad / left stick / arrows    Change: left-right    Toggle: A / Enter" +
-                "\nClose: B / Esc / the open button",
+                $"Open / close      {HotkeyLabel}   or   L3 + R3\n" +
+                "Move              D-pad / stick / arrows\n" +
+                "Change            left / right\n" +
+                "Toggle            A / Enter          Close      B / Esc",
                 _theme.Footer);
 
             GUILayout.Space(6f);
@@ -338,7 +340,7 @@ namespace SilksongTweaks.Ui
                 "  - BlueRaja - rosaries never permanently lost, for cocoon merging\n" +
                 "  - Ericky1694 - CustomDifficulty, for health and damage tuning\n" +
                 "\nMIT licensed. Built on BepInEx and HarmonyX.",
-                _theme.Footer);
+                _theme.Credits);
         }
 
         private static string[] ToArray(IReadOnlyList<string> items)

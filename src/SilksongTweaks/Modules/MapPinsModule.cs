@@ -34,6 +34,9 @@ namespace SilksongTweaks.Modules
     {
         private static MapPinsModule _instance;
 
+        /// <summary>Caps the diagnostic spam: the map can be opened many times per session.</summary>
+        private static int _reportsLeft = 8;
+
         private ConfigEntry<bool> _showPins;
 
         public override string Id => "MapPins";
@@ -121,10 +124,18 @@ namespace SilksongTweaks.Modules
                     activated++;
                 }
 
-                if (activated <= 0) return;
-
                 self.MarkFired();
-                Plugin.Log.LogInfo($"[MapPins] activated {activated} of {pins.Length} pin(s)");
+
+                // Logged UNCONDITIONALLY, and that matters: the previous version only logged when
+                // it activated something, so "found zero pins" and "was never called" produced
+                // identical silence — the two cases needing completely different fixes.
+                if (_reportsLeft > 0)
+                {
+                    _reportsLeft--;
+                    Plugin.Log.LogInfo(
+                        $"[MapPins] EnableUnlockedAreas ran: found {pins.Length} pin(s), " +
+                        $"activated {activated}");
+                }
             }
             catch (System.Exception ex)
             {

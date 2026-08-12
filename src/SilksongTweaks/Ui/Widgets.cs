@@ -6,8 +6,8 @@ namespace SilksongTweaks.Ui
     /// <summary>Styled primitives. Each renders one setting row and writes straight to config.</summary>
     public static class Widgets
     {
-        private const float LabelWidth = 190f;
-        private const float ValueWidth = 60f;
+        private const float LabelWidth = 240f;
+        private const float ValueWidth = 76f;
         private const float RowHeight = 22f;
 
         public static void Toggle(Theme theme, string label, string tooltip, ref bool value)
